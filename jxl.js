@@ -1,4 +1,6 @@
 (function () {
+  let cache;
+
   function imgDataToURL(img, imgData) {
     var canvas = document.createElement('canvas');
     canvas.width = imgData.width;
@@ -13,6 +15,7 @@
     canvas.height = img.height === 1 ? imgData.height : img.height;
     canvas.className = img.className;
     canvas.id = img.id;
+    canvas.title = img.title;
     canvas.dataset.jxlSrc = img.dataset.jxlSrc;
     const imgBitmap = await window.createImageBitmap(imgData, {resizeWidth: canvas.width, resizeHeight: canvas.height});
     canvas.getContext('2d').drawImage(imgBitmap, 0, 0);
@@ -20,13 +23,15 @@
   }
 
   async function decode(img, isCSS) {
-    const jxlSrc = img.dataset.jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : img.currentSrc;
+    const jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : (img.dataset.jxlSrc = img.currentSrc);
     img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // blank 1x1 image
-    const cache = await caches.open('jxl');
-    const cachedImg = await cache.match(jxlSrc);
+    try {
+      cache = await caches.open('jxl');
+    } catch (e) {}
+    const cachedImg = cache && await cache.match(jxlSrc);
     if (cachedImg) {
       const cachedImgData = new ImageData(new Uint8ClampedArray(await cachedImg.arrayBuffer()), cachedImg.headers.get('width'), cachedImg.headers.get('height'));
-      isCSS ? imgDataToURL(img, cachedImgData) : imgDataToCanvas(img, cachedImgData);
+      requestAnimationFrame(() => isCSS ? imgDataToURL(img, cachedImgData) : imgDataToCanvas(img, cachedImgData));
       return;
     }
     const res = await fetch(jxlSrc);
@@ -35,8 +40,8 @@
     worker.postMessage({jxlSrc, image});
     worker.addEventListener('message', m => {
       const imgData = m.data.result;
-      isCSS ? imgDataToURL(img, imgData) : imgDataToCanvas(img, imgData);
-      cache.put(jxlSrc, new Response(imgData.data, {headers: {'content-type': 'image/jxl', width: imgData.width, height: imgData.height}}));
+      requestAnimationFrame(() => isCSS ? imgDataToURL(img, imgData) : imgDataToCanvas(img, imgData));
+      cache && cache.put(jxlSrc, new Response(imgData.data, {headers: {'content-type': 'image/jxl', width: imgData.width, height: imgData.height}}));
     });
   }
 
