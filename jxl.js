@@ -5,9 +5,10 @@
     useCache: true
   };
 
-  let cache;
+  let cache, workers = {};
 
   function imgDataToDataURL(img, imgData, isCSS) {
+    const jxlSrc = img.dataset.jxlSrc;
     if (imgData instanceof Blob) {
       const dataURL = URL.createObjectURL(imgData);
       if (isCSS)
@@ -16,14 +17,15 @@
         img.src = dataURL;
     } else if ('OffscreenCanvas' in window) {
       const canvas = new OffscreenCanvas(imgData.width, imgData.height);
-      const worker = new Worker('jxl_dec.js');
-      worker.postMessage({canvas, imgData}, [canvas]);
-      worker.addEventListener('message', m => {
-        if (isCSS)
-          img.style.backgroundImage = 'url("' + m.data.url + '")';
-        else
-          img.src = m.data.url;
-        config.useCache && cache && cache.put(img.dataset.jxlSrc, new Response(m.data.blob));
+      workers[jxlSrc].postMessage({canvas, imgData}, [canvas]);
+      workers[jxlSrc].addEventListener('message', m => {
+        if (m.data.url && m.data.blob) {
+          if (isCSS)
+            img.style.backgroundImage = 'url("' + m.data.url + '")';
+          else
+            img.src = m.data.url;
+          config.useCache && cache && cache.put(jxlSrc, new Response(m.data.blob));
+        }
       });
     } else {
       const canvas = document.createElement('canvas');
@@ -36,7 +38,7 @@
           img.style.backgroundImage = 'url("' + dataURL + '")';
         else
           img.src = dataURL;
-        config.useCache && cache && cache.put(img.dataset.jxlSrc, new Response(blob));
+        config.useCache && cache && cache.put(jxlSrc, new Response(blob));
       }, 'image/jpeg');
     }
   }
@@ -57,9 +59,9 @@
     }
     const res = await fetch(jxlSrc);
     const image = await res.arrayBuffer();
-    const worker = new Worker('jxl_dec.js');
-    worker.postMessage({jxlSrc, image}, [image]);
-    worker.addEventListener('message', m => requestAnimationFrame(() => imgDataToDataURL(img, m.data.imgData, isCSS)));
+    workers[jxlSrc] = new Worker('jxl_dec.js');
+    workers[jxlSrc].postMessage({jxlSrc, image});
+    workers[jxlSrc].addEventListener('message', m => m.data.imgData && requestAnimationFrame(() => imgDataToDataURL(img, m.data.imgData, isCSS)));
   }
 
   new MutationObserver(mutations => mutations.forEach(mutation => Array.prototype.filter.call(mutation.addedNodes,
