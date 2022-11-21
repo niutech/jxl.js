@@ -32,7 +32,7 @@
       canvas.width = imgData.width;
       canvas.height = imgData.height;
       canvas.getContext('2d').putImageData(imgData, 0, 0);
-      canvas.toBlob(async blob => {
+      canvas.toBlob(blob => {
         const dataURL = URL.createObjectURL(blob);
         if (isCSS)
           img.style.backgroundImage = 'url("' + dataURL + '")';
@@ -72,4 +72,4 @@
       else
         decode(el, true);
     }))).observe(document.documentElement, {subtree: true, childList: true});
-})();
+}());
