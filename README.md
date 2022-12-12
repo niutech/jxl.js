@@ -16,6 +16,12 @@ JXL.js uses Mutation Observer to watch for `<img>` tags being added to the DOM a
 
 #### [See the demo](https://niutech.github.io/jxl.js/)
 
+## Multithread version
+
+There is an experimental multithread version of JXL.js using WebAssembly SIMD operations if available. Based on the [libjxl wasm demo](https://github.com/libjxl/libjxl/tree/main/tools/wasm_demo). Requires HTTPS as well as Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy response headers (or provided service worker as a fallback).
+
+#### [See the multithread demo](https://niutech.github.io/jxl.js/multithread/)
+
 ## License
 
 &copy; 2022 Jerzy Głowacki and Squoosh Developers under Apache 2.0 License.
