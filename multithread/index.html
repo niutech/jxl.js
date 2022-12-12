@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>JXL.js Multithread Demo</title>
+  <link rel="prefetch" href="jxl_decoder_simd.min.js" fetchpriority="high">
+  <link rel="prefetch" href="jxl_decoder.worker.js" fetchpriority="high">
+  <link rel="prefetch" href="jxl_decoder.wasm" fetchpriority="high">
+  <!--
+  serviceworker.min.js is required only if your web server doesn't add response headers:
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  -->
+  <script src="serviceworker.min.js"></script>
+  <script src="jxl.min.js"></script>
+</head>
+<body>
+    <h1><a href="https://github.com/niutech/jxl.js" style="color: inherit;">JXL.js</a> demo</h1>
+    <p>Image:</p>
+    <img src="../img/test.jxl" alt="Test image">
+    <p>Background image:</p>
+    <div style="background: url(../img/test2.jxl) center / contain; width: 1000px; height: 1000px;"></div>
+</body>
+</html>
