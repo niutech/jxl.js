@@ -2,7 +2,8 @@
   "use strict";
 
   const config = {
-    useCache: true
+    useCache: true,
+    imageType: "jpeg" // jpeg/png/webp
   };
 
   let cache, workers = {};
@@ -17,7 +18,7 @@
         img.src = dataURL;
     } else if ('OffscreenCanvas' in window) {
       const canvas = new OffscreenCanvas(imgData.width, imgData.height);
-      workers[jxlSrc].postMessage({canvas, imgData}, [canvas]);
+      workers[jxlSrc].postMessage({canvas, imgData, imageType: config.imageType}, [canvas]);
       workers[jxlSrc].addEventListener('message', m => {
         if (m.data.url && m.data.blob) {
           if (isCSS)
@@ -39,7 +40,7 @@
         else
           img.src = dataURL;
         config.useCache && cache && cache.put(jxlSrc, new Response(blob));
-      }, 'image/jpeg');
+      }, 'image/' + config.imageType);
     }
   }
 
