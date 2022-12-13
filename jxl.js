@@ -46,6 +46,7 @@
 
   async function decode(img, isCSS) {
     const jxlSrc = img.dataset.jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : img.currentSrc;
+    img.srcset = '';
     img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // blank 1x1 image
     if (config.useCache) {
       try {
