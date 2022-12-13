@@ -14,7 +14,7 @@ You can enable/disable cache and choose target image type (JPEG/PNG/WebP) by edi
 
 ## How it works
 
-JXL.js uses Mutation Observer to watch for `<img>` tags being added to the DOM as well as CSS background images and it decodes them as they appear using WebAssembly decoder in Web Worker. Then the JPEG XL image data is transcoded into JPEG/PNG/WebP image and cached using Cache API for faster subsequent page views. The transcoding is performed using Offscreen Canvas in Web Worker for jank-free performance, if available.
+JXL.js uses Mutation Observer to watch for `<img>` tags being added to the DOM as well as CSS background images and it decodes them as they appear using WebAssembly decoder in Web Worker. Then the JPEG XL image data is transcoded into JPEG/PNG/WebP image and cached using [Cache API](https://developer.mozilla.org/en-US/docs/Web/API/Cache) for faster subsequent page views (you can delete cached images using [Dev Tools](https://developer.chrome.com/docs/devtools/storage/cache/#deleteresource)). The transcoding is performed using Offscreen Canvas in Web Worker for jank-free performance, if available.
 
 #### [See the demo](https://niutech.github.io/jxl.js/)
 
