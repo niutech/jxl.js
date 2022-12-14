@@ -1,7 +1,7 @@
 {
   "name": "jxl.js",
   "description": "JPEG XL decoder in JavaScript using WebAssembly",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/niutech/jxl.js.git"
@@ -20,6 +20,8 @@
   "homepage": "https://github.com/niutech/jxl.js",
   "files": [
     "*.js",
-    "*.wasm"
+    "*.wasm",
+    "multithread/*.js",
+    "multithread/*.wasm"
   ]
 }
