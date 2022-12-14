@@ -24,6 +24,15 @@ There is an experimental multithread version of JXL.js using Web Workers and Web
 
 #### [See the multithread demo](https://niutech.github.io/jxl.js/multithread/)
 
+## Benchmark
+
+|           | Single-thread | Multi-thread |
+|-----------|---------------|--------------|
+| test.jxl  | 790 ms        | 440 ms       |
+| test2.jxl | 830 ms        | 590 ms       |
+
+Tested on Microsoft Edge 108, average times, no cache.
+
 ## License
 
 &copy; 2022 Jerzy Głowacki and Squoosh Developers under Apache 2.0 License.
