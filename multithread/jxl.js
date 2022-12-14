@@ -6,7 +6,6 @@
     imageType: 'jpeg' // jpeg/png/webp
   };
 
-  const isSimd = WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));
   let cache;
 
   function init() {
@@ -69,8 +68,8 @@
   }
   
   async function process(res, img, isCSS) {
-    let module, decoder, buffer, reader;
-    const bufferSize = 100 * 1024;
+    let module, decoder, buffer, reader, timer;
+    const bufferSize = 1024 * 1024;
 
     function readChunk() {
       reader.read().then(onChunk, onError);
@@ -98,9 +97,8 @@
       const result = processInput(chunkLen);
       if (result.error)
         return false;
-      if (result.wantFlush) {
-        const flushResult = module._jxlFlush(decoder);
-      }
+      if (result.wantFlush)
+        module._jxlFlush(decoder);
       if (result.copyPixels) {
         let width = module.HEAP32[decoder >> 2];
         let height = module.HEAP32[(decoder + 4) >> 2];
@@ -119,6 +117,7 @@
         wantFlush: false,
         copyPixels: false
       };
+      timer = timer || performance.now();
       let result = module._jxlProcessInput(decoder, buffer, chunkLen);
       if (result === 2) {
           // More input needed
@@ -126,6 +125,7 @@
         response.wantFlush = true;
         response.copyPixels = true;
       } else if (result === 0) {
+        console.log('Finished decoding', img.dataset.jxlSrc, 'in', performance.now() - timer, 'ms');
         response.wantFlush = false;
         response.copyPixels = true;
       } else {
@@ -135,7 +135,7 @@
     }
 
     function onError(data) {
-      console.error('Error loading image:', data);
+      console.error(data);
       onFinish();
     }
 
@@ -147,15 +147,17 @@
 
     module = await JxlCodecModule();
     decoder = module._jxlCreateInstance(true, 100);
-    if (decoder < 4) {
-      onError('Cannot create decoder');
-      return;
-    }
+    if (decoder < 4)
+      return onError('Cannot create decoder');
     buffer = module._malloc(bufferSize);
     reader = res.body.getReader();
     readChunk();
   }
 
+  if (!crossOriginIsolated)
+    throw 'No COOP/COEP response headers';
+
+  const isSimd = WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));
   const script = document.createElement('script');
   script.src = isSimd ? 'jxl_decoder_simd.min.js' : 'jxl_decoder.min.js';
   script.onload = init;
