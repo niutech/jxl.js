@@ -16,58 +16,63 @@
   function check(el) {
     if (el instanceof HTMLImageElement && el.src.endsWith('.jxl'))
       if (el.complete && el.naturalHeight === 0)
-        decode(el, false);
+        decode(el, false, false);
       else
         el.onerror = () => decode(el, false);
+    else if (el instanceof HTMLSourceElement && el.srcset.endsWith('.jxl'))
+      decode(el, false, true);
     else if (el instanceof Element && getComputedStyle(el).backgroundImage.endsWith('.jxl")'))
-      decode(el, true);
+      decode(el, true, false);
   }
 
-  function imgDataToDataURL(img, imgData, isCSS) {
+  function imgDataToDataURL(img, imgData, isCSS, isSource) {
     const jxlSrc = img.dataset.jxlSrc;
     if (imgData instanceof Blob) {
-      const dataURL = URL.createObjectURL(imgData);
-      if (isCSS)
-        img.style.backgroundImage = 'url("' + dataURL + '")';
-      else
-        img.src = dataURL;
+      dataURLToSrc(img, URL.createObjectURL(imgData), isCSS, isSource);
     } else {
       const canvas = document.createElement('canvas');
       canvas.width = imgData.width;
       canvas.height = imgData.height;
       canvas.getContext('2d').putImageData(imgData, 0, 0);
       canvas.toBlob(blob => {
-        const dataURL = URL.createObjectURL(blob);
-        if (isCSS)
-          img.style.backgroundImage = 'url("' + dataURL + '")';
-        else
-          img.src = dataURL;
+        dataURLToSrc(img, URL.createObjectURL(blob), isCSS, isSource);
         config.useCache && cache && cache.put(jxlSrc, new Response(blob));
       }, 'image/' + config.imageType);
     }
   }
 
-  async function decode(img, isCSS) {
-    const jxlSrc = img.dataset.jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : img.currentSrc;
-    img.srcset = '';
-    img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // blank 1x1 image
+  function dataURLToSrc(img, dataURL, isCSS, isSource) {
+    if (isCSS)
+      img.style.backgroundImage = 'url("' + dataURL + '")';
+    else if (isSource) {
+      img.srcset = dataURL;
+      img.type = 'image/' + config.imageType;
+    } else
+      img.src = dataURL;
+  }
+
+  async function decode(img, isCSS, isSource) {
+    const jxlSrc = img.dataset.jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : isSource ? img.srcset : img.currentSrc;
+    if (!isCSS && !isSource) {
+      img.srcset = '';
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // blank 1x1 image
+    }
     if (config.useCache) {
       try {
         cache = cache || await caches.open('jxl');
-      } catch (e) {
-      }
+      } catch (e) {}
       const cachedImg = cache && await cache.match(jxlSrc);
       if (cachedImg) {
         const cachedImgData = await cachedImg.blob();
-        requestAnimationFrame(() => imgDataToDataURL(img, cachedImgData, isCSS));
+        requestAnimationFrame(() => imgDataToDataURL(img, cachedImgData, isCSS, isSource));
         return;
       }
     }
     const res = await fetch(jxlSrc);
-    requestAnimationFrame(() => process(res, img, isCSS));
+    requestAnimationFrame(() => process(res, img, isCSS, isSource));
   }
   
-  async function process(res, img, isCSS) {
+  async function process(res, img, isCSS, isSource) {
     let module, decoder, buffer, reader, timer;
     const bufferSize = 1024 * 1024;
 
@@ -106,7 +111,7 @@
         let end = start + width * height * 4;
         let src = new Uint8Array(module.HEAP8.buffer);
         let imgData = new ImageData(new Uint8ClampedArray(src.slice(start, end)), width, height);
-        requestAnimationFrame(() => imgDataToDataURL(img, imgData, isCSS));
+        requestAnimationFrame(() => imgDataToDataURL(img, imgData, isCSS, isSource));
       }
       return true;
     }
@@ -140,8 +145,10 @@
     }
 
     function onFinish() {
-      module._jxlDestroyInstance(decoder);
-      module._free(buffer);
+      if (module) {
+        module._jxlDestroyInstance(decoder);
+        module._free(buffer);
+      }
       module = decoder = buffer = undefined;
     }
 
@@ -154,7 +161,7 @@
     readChunk();
   }
 
-  if (!crossOriginIsolated)
+  if (!window.crossOriginIsolated)
     throw 'No COOP/COEP response headers';
 
   const isSimd = WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]));

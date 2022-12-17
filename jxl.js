@@ -3,28 +3,21 @@
 
   const config = {
     useCache: true,
-    imageType: "jpeg" // jpeg/png/webp
+    imageType: 'jpeg' // jpeg/png/webp
   };
 
   let cache, workers = {};
 
-  function imgDataToDataURL(img, imgData, isCSS) {
+  function imgDataToDataURL(img, imgData, isCSS, isSource) {
     const jxlSrc = img.dataset.jxlSrc;
     if (imgData instanceof Blob) {
-      const dataURL = URL.createObjectURL(imgData);
-      if (isCSS)
-        img.style.backgroundImage = 'url("' + dataURL + '")';
-      else
-        img.src = dataURL;
+      dataURLToSrc(img, URL.createObjectURL(imgData), isCSS, isSource);
     } else if ('OffscreenCanvas' in window) {
       const canvas = new OffscreenCanvas(imgData.width, imgData.height);
       workers[jxlSrc].postMessage({canvas, imgData, imageType: config.imageType}, [canvas]);
       workers[jxlSrc].addEventListener('message', m => {
         if (m.data.url && m.data.blob) {
-          if (isCSS)
-            img.style.backgroundImage = 'url("' + m.data.url + '")';
-          else
-            img.src = m.data.url;
+          dataURLToSrc(img, m.data.url, isCSS, isSource);
           config.useCache && cache && cache.put(jxlSrc, new Response(m.data.blob));
         }
       });
@@ -34,20 +27,28 @@
       canvas.height = imgData.height;
       canvas.getContext('2d').putImageData(imgData, 0, 0);
       canvas.toBlob(blob => {
-        const dataURL = URL.createObjectURL(blob);
-        if (isCSS)
-          img.style.backgroundImage = 'url("' + dataURL + '")';
-        else
-          img.src = dataURL;
+        dataURLToSrc(img, URL.createObjectURL(blob), isCSS, isSource);
         config.useCache && cache && cache.put(jxlSrc, new Response(blob));
       }, 'image/' + config.imageType);
     }
   }
 
-  async function decode(img, isCSS) {
-    const jxlSrc = img.dataset.jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : img.currentSrc;
-    img.srcset = '';
-    img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // blank 1x1 image
+  function dataURLToSrc(img, dataURL, isCSS, isSource) {
+    if (isCSS)
+      img.style.backgroundImage = 'url("' + dataURL + '")';
+    else if (isSource) {
+      img.srcset = dataURL;
+      img.type = 'image/' + config.imageType;
+    } else
+      img.src = dataURL;
+  }
+
+  async function decode(img, isCSS, isSource) {
+    const jxlSrc = img.dataset.jxlSrc = isCSS ? getComputedStyle(img).backgroundImage.slice(5, -2) : isSource ? img.srcset : img.currentSrc;
+    if (!isCSS && !isSource) {
+      img.srcset = '';
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // blank 1x1 image
+    }
     if (config.useCache) {
       try {
         cache = cache || await caches.open('jxl');
@@ -55,7 +56,7 @@
       const cachedImg = cache && await cache.match(jxlSrc);
       if (cachedImg) {
         const cachedImgData = await cachedImg.blob();
-        requestAnimationFrame(() => imgDataToDataURL(img, cachedImgData, isCSS));
+        requestAnimationFrame(() => imgDataToDataURL(img, cachedImgData, isCSS, isSource));
         return;
       }
     }
@@ -63,15 +64,15 @@
     const image = await res.arrayBuffer();
     workers[jxlSrc] = new Worker('jxl_dec.js');
     workers[jxlSrc].postMessage({jxlSrc, image});
-    workers[jxlSrc].addEventListener('message', m => m.data.imgData && requestAnimationFrame(() => imgDataToDataURL(img, m.data.imgData, isCSS)));
+    workers[jxlSrc].addEventListener('message', m => m.data.imgData && requestAnimationFrame(() => imgDataToDataURL(img, m.data.imgData, isCSS, isSource)));
   }
 
-  new MutationObserver(mutations => mutations.forEach(mutation => Array.prototype.filter.call(mutation.addedNodes,
-    el => (el instanceof HTMLImageElement && el.src.endsWith('.jxl')) || (el instanceof Element && getComputedStyle(el).backgroundImage.endsWith('.jxl")')))
-    .forEach(el => {
-      if (el instanceof HTMLImageElement)
-        el.onerror = () => decode(el, false);
-      else
-        decode(el, true);
-    }))).observe(document.documentElement, {subtree: true, childList: true});
+  new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(el => {
+    if (el instanceof HTMLImageElement && el.src.endsWith('.jxl'))
+      el.onerror = () => decode(el, false, false);
+    else if (el instanceof HTMLSourceElement && el.srcset.endsWith('.jxl'))
+      decode(el, false, true);
+    else if (el instanceof Element && getComputedStyle(el).backgroundImage.endsWith('.jxl")'))
+      decode(el, true, false);
+  }))).observe(document.documentElement, {subtree: true, childList: true});
 }());
