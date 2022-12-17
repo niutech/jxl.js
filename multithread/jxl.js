@@ -74,7 +74,7 @@
   
   async function process(res, img, isCSS, isSource) {
     let module, decoder, buffer, reader, timer;
-    const bufferSize = 1024 * 1024;
+    const bufferSize = 256 * 1024;
 
     function readChunk() {
       reader.read().then(onChunk, onError);
