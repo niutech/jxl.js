@@ -16,13 +16,21 @@
   function check(el) {
     if (el instanceof HTMLImageElement && el.src.endsWith('.jxl'))
       if (el.complete && el.naturalHeight === 0)
-        decode(el, false, false);
+        decode(el, false, false)
       else
-        el.onerror = () => decode(el, false);
+        el.onerror = () => decode(el, false)
     else if (el instanceof HTMLSourceElement && el.srcset.endsWith('.jxl'))
       decode(el, false, true);
     else if (el instanceof Element && getComputedStyle(el).backgroundImage.endsWith('.jxl")'))
       decode(el, true, false);
+    else if (el instanceof Element && typeof el.getElementsByTagName === 'function')
+      for (const img of el.getElementsByTagName('img')) {
+        if (img instanceof HTMLImageElement && img.src.endsWith('.jxl'))
+          if (img.complete && img.naturalHeight === 0)
+            decode(img, false, false)
+          else
+            img.onerror = () => decode(img, false)
+      }
   }
 
   function imgDataToDataURL(img, imgData, isCSS, isSource) {
