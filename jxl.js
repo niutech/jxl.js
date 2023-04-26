@@ -68,11 +68,12 @@
   }
 
   new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(el => {
-    if (el instanceof HTMLImageElement && el.src.endsWith('.jxl'))
+    const isJxl = (str) => (str.match(/\.jxl(\?.*)?$/));
+    if (el instanceof HTMLImageElement && isJxl(el.src))
       el.onerror = () => decode(el, false, false);
-    else if (el instanceof HTMLSourceElement && el.srcset.endsWith('.jxl'))
+    else if (el instanceof HTMLSourceElement && isJxl(el.srcset))
       decode(el, false, true);
-    else if (el instanceof Element && getComputedStyle(el).backgroundImage.endsWith('.jxl")'))
+    else if (el instanceof Element && isJxl(getComputedStyle(el).backgroundImage.replace(new RegExp('"\\)$'), '')))
       decode(el, true, false);
   }))).observe(document.documentElement, {subtree: true, childList: true});
 }());
